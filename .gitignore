@@ -1,8 +1,9 @@
 .DS_Store
 *.o
 *.swp
+.*.swp
+.*.*.swp
 leak.out
 *.txt
-a
 a.out
 *.sh
