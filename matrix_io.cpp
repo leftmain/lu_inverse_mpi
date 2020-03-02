@@ -115,8 +115,8 @@ mpi_init_matrix (double *a, int n, int m, int p, int my_rank,
 //-----------------------------------------------------------------------------
 
 void
-mpi_print_block_matrix_simple (double *a, double *b, int n, int m,
-                               int p, int my_rank)
+mpi_print_block_matrix_simple (const double *a, double *lines,
+                               int n, int m, int p, int my_rank)
 {
   int k = n / m;
   int l = n % m;
@@ -129,7 +129,7 @@ mpi_print_block_matrix_simple (double *a, double *b, int n, int m,
     {
       for (int t = 0; t < p; ++t)
 	      {
-          double *curr_array = a;
+          const double *curr_array = a;
           int columns = k / p;
           if (k % p > 0 && t < k % p)
             columns++;
@@ -138,8 +138,8 @@ mpi_print_block_matrix_simple (double *a, double *b, int n, int m,
             columns += l;
           if (t > 0)
             {
-              curr_array = b;
-              MPI_Recv (b, c_blocks * n * m, MPI_DOUBLE, t, tag,
+              curr_array = lines;
+              MPI_Recv (lines, c_blocks * n * m, MPI_DOUBLE, t, tag,
                         MPI_COMM_WORLD, &status);
             }
           printf ("%d:\n", t);
@@ -156,8 +156,8 @@ mpi_print_block_matrix_simple (double *a, double *b, int n, int m,
 //-----------------------------------------------------------------------------
 
 void
-mpi_print_block_matrix (double *a, double *line, int n, int m, int p,
-                        int my_rank, FILE *fp)
+mpi_print_block_matrix (const double *a, double *line, int n, int m,
+                        int p, int my_rank, FILE *fp)
 {
   int N = n;
   int tag = 0;
@@ -173,7 +173,7 @@ mpi_print_block_matrix (double *a, double *line, int n, int m, int p,
   int L = N % m;
   int blocks = (L == 0) ? K : K + 1;
 
-  double *curr_array = a;
+  const double *curr_array = a;
   int i = 0;
   int local_line = -1;
   for (i = 0; i < blocks; ++i)
@@ -219,8 +219,8 @@ mpi_print_block_matrix (double *a, double *line, int n, int m, int p,
 //-----------------------------------------------------------------------------
 
 int
-mpi_print_block_matrix (double *a, double *line, int n, int m, int p,
-                        int my_rank, const char *file_name)
+mpi_print_block_matrix (const double *a, double *line, int n, int m,
+                        int p, int my_rank, const char *file_name)
 {
   Closer closer;
   FILE *fp = stdout;
@@ -249,7 +249,7 @@ mpi_print_block_matrix (double *a, double *line, int n, int m, int p,
 //-----------------------------------------------------------------------------
 
 void
-print_block_line (double *line, int n, int m, int h, FILE *fp, int max_h)
+print_block_line (const double *line, int n, int m, int h, FILE *fp, int max_h)
 {
   int k = n / m;
   int l = n % m;
@@ -284,7 +284,7 @@ print_block_line (double *line, int n, int m, int h, FILE *fp, int max_h)
 //-----------------------------------------------------------------------------
 
 void
-print_matrix (double *a, int n, int m, FILE *fp)
+print_matrix (const double *a, int n, int m, FILE *fp)
 {
   if (m <= 0 || n <= 0)
     return;
@@ -321,13 +321,13 @@ print_matrix (double *a, int n, int m, FILE *fp)
 //-----------------------------------------------------------------------------
 
 int
-print_matrix (double *a, int n, int m, const char *file_name)
+print_matrix (const double *a, int n, int m, const char *file_name)
 {
   Closer closer;
   FILE *fp = stdout;
   if (file_name)
     {
-      FILE *fp = fopen (file_name, "w");
+      fp = fopen (file_name, "w");
       closer.add (fp);
       if (!fp)
         return CANNOT_OPEN;

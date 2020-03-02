@@ -1,4 +1,6 @@
 #include "matrix_io.h"
+#include "matrix_op.h"
+#include "matrix_mpi_op.h"
 
 void
 start_algorithm (int argc, char *argv[], int p, int my_rank);
@@ -8,6 +10,7 @@ static int N;
 double
 init_func (int i, int j)
 {
+  return 1. / (i + j + 1);
   return (double)(i * N + j);
   return (double)(i - j + 1);
 }
@@ -43,6 +46,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   const char *file_name = nullptr;
   double *a = nullptr;
   double *b = nullptr;
+  double *line = nullptr;
   int blocks = 0; // blocks in string
   int p_blocks = 0; // blocks in column (for each process)
   int n = 0;
@@ -75,8 +79,10 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   error = ALL_RIGHT;
   a = new double [p_blocks * n * m];
   b = new double [p_blocks * n * m];
+  line = new double [n * m];
   deleter.add (a);
   deleter.add (b);
+  deleter.add (line);
   if (!a || !b)
     error = MEMORY_ERROR;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -88,11 +94,11 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
 //#ifdef TEST
   file_name = "1_matr.txt";
   double *c = nullptr;
+  double c_norm = 0.;
 
   if (my_rank == 0)
     {
       c = new double [n * n];
-      deleter.add (c);
       if (!c)
         MPI_Abort (MPI_COMM_WORLD, 0);
 
@@ -100,8 +106,11 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
         for (int j = 0; j < n; ++j)
           c[i * n + j] = init_func (i, j);
 
+      c_norm = norma (c, n);
       print_matrix (c, n, n, file_name);
+      free (c);
     }
+  MPI_Barrier (MPI_COMM_WORLD);
 #endif
 
 
@@ -137,6 +146,16 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
 
 //  mpi_print_block_matrix_simple (a, b, n, m, p, my_rank);
   mpi_print_block_matrix (a, b, n, m, p, my_rank);
+  double norm = mpi_norma (a, line, n, m, p, my_rank);
+
+#if 0
+  double norm = mpi_norma (a, line, n, m, p, my_rank);
+  if (my_rank == 0)
+    {
+      printf ("norma = %le\n", norm);
+      print_matrix (&c_norm, 1, 1, "2_norm.txt");
+    }
+#endif
 
 
 #if 0 // =====NEEDREMOVE=====

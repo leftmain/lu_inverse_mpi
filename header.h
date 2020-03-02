@@ -6,6 +6,8 @@
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 #include <vector>
 
 template <typename T>
