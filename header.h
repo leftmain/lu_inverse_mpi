@@ -2,8 +2,7 @@
 #define HEADER_H
 
 //#define DEBUG
-//#define TEST
-#define PRINT if(my_rank==0)printf("#\n");
+#define TEST
 
 #include "mpi.h"
 #include <stdio.h>

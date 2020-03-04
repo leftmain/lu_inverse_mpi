@@ -24,9 +24,6 @@ void
 get_block (const double *a, double *block, int n, int m,
            int p, int my_rank, int i, int j);
 
-const double *
-get_block (const double *a, int n, int m, int p,
-           int my_rank, int i, int j);
 
 void
 set_block (double *a, const double *block, int n, int m,

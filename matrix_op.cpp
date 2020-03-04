@@ -152,7 +152,7 @@ get_block (const double *a, double *block, int n, int m,
   int h = block_height_iklm (i, k, l, m);
   int w = block_width_jklm (j, k, l, m);
 
-  memcpy (block, a + (i / p) * n * m + (j / m) * h * m,
+  memcpy (block, a + (i / p) * n * m + j * h * m,
           h * w * sizeof (double));
 }
 
@@ -185,7 +185,7 @@ set_block (double *a, const double *block, int n, int m,
   int h = block_height_iklm (i, k, l, m);
   int w = block_width_jklm (j, k, l, m);
 
-  memcpy (a + (i / p) * n * m + (j / m) * h * m, block,
+  memcpy (a + (i / p) * n * m + j * h * m, block,
           h * w * sizeof (double));
 }
 

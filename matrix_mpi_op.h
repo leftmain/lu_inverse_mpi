@@ -3,6 +3,8 @@
 
 #include "header.h"
 #include "matrix_io.h"
+#define A(a) MPI_Barrier(MPI_COMM_WORLD);if(my_rank==a){
+#define B }MPI_Barrier(MPI_COMM_WORLD);
 
 double
 mpi_norma (const double *a, double *block, int n, int m,
