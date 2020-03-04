@@ -10,9 +10,10 @@ static int N;
 double
 init_func (int i, int j)
 {
-  return 1. / (i + j + 1);
+  return N - std::max (i, j);
   return (double)(i * N + j);
   return (double)(i - j + 1);
+  return 1. / (i + j + 1);
 }
 
 
@@ -79,7 +80,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   error = ALL_RIGHT;
   a = new double [p_blocks * n * m];
   b = new double [p_blocks * n * m];
-  line = new double [n * m];
+  line = new double [n * m + 3 * m * m];
   deleter.add (a);
   deleter.add (b);
   deleter.add (line);
@@ -90,8 +91,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
     return;
 
 
-#if 0
-//#ifdef TEST
+#ifdef TEST
   file_name = "1_matr.txt";
   double *c = nullptr;
   double c_norm = 0.;
@@ -145,10 +145,17 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
 
 
 //  mpi_print_block_matrix_simple (a, b, n, m, p, my_rank);
-  mpi_print_block_matrix (a, b, n, m, p, my_rank);
-  double norm = mpi_norma (a, line, n, m, p, my_rank);
+  mpi_init_matrix (b, n, m, p, my_rank, init_func);
+  mpi_init_matrix (a, n, m, p, my_rank, init_func);
+//  mpi_print_block_matrix (a, b, n, m, p, my_rank);
+//  double norm = mpi_norma (a, line, n, m, p, my_rank);
+  double res = mpi_residual (a, b, line, n, m, p, my_rank);
+  if (my_rank == 0)
+    {
+      printf ("residual = %lf\n", res);
+    }
 
-#if 0
+#ifdef TEST
   double norm = mpi_norma (a, line, n, m, p, my_rank);
   if (my_rank == 0)
     {

@@ -1,7 +1,6 @@
 #include "matrix_io.h"
 
 
-//-----------------------------------------------------------------------------
 
 int
 mpi_read_matrix (double *a, double *line, int n, int m, int p,
@@ -81,8 +80,6 @@ mpi_read_matrix (double *a, double *line, int n, int m, int p,
 }
 
 
-//-----------------------------------------------------------------------------
-
 void
 mpi_init_matrix (double *a, int n, int m, int p, int my_rank,
                  double (*f)(int, int))
@@ -111,8 +108,6 @@ mpi_init_matrix (double *a, int n, int m, int p, int my_rank,
     }
 }
 
-
-//-----------------------------------------------------------------------------
 
 void
 mpi_print_block_matrix_simple (const double *a, double *lines,
@@ -152,8 +147,6 @@ mpi_print_block_matrix_simple (const double *a, double *lines,
     }
 }
 
-
-//-----------------------------------------------------------------------------
 
 void
 mpi_print_block_matrix (const double *a, double *line, int n, int m,
@@ -216,8 +209,6 @@ mpi_print_block_matrix (const double *a, double *line, int n, int m,
 }
 
 
-//-----------------------------------------------------------------------------
-
 int
 mpi_print_block_matrix (const double *a, double *line, int n, int m,
                         int p, int my_rank, const char *file_name)
@@ -245,8 +236,6 @@ mpi_print_block_matrix (const double *a, double *line, int n, int m,
   return ALL_RIGHT;
 }
 
-
-//-----------------------------------------------------------------------------
 
 void
 print_block_line (const double *line, int n, int m, int h, FILE *fp, int max_h)
@@ -280,8 +269,6 @@ print_block_line (const double *line, int n, int m, int h, FILE *fp, int max_h)
     }
 }
 
-
-//-----------------------------------------------------------------------------
 
 void
 print_matrix (const double *a, int n, int m, FILE *fp)
@@ -318,8 +305,6 @@ print_matrix (const double *a, int n, int m, FILE *fp)
 }
 
 
-//-----------------------------------------------------------------------------
-
 int
 print_matrix (const double *a, int n, int m, const char *file_name)
 {
@@ -336,7 +321,4 @@ print_matrix (const double *a, int n, int m, const char *file_name)
   return ALL_RIGHT;
 }
 
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 
