@@ -172,12 +172,12 @@ double *
 get_block (double *a, int n, int m, int p,
            int my_rank, int i, int j)
 {
-  int k = n / m;
-  int l = n % m;
+//  int k = n / m;
+//  int l = n % m;
 //  int h = (i == k) ? l : m;
 //  int w = (j == k) ? l : m;
-  int h = block_height_iklm (i, k, l, m);
-  int w = block_width_jklm (j, k, l, m);
+//  int h = block_height_iklm (i, k, l, m);
+//  int w = block_width_jklm (j, k, l, m);
 
   return a + (i / p) * n * m + (j / m) * j * m;
 }

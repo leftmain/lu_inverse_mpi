@@ -2,7 +2,7 @@
 #define HEADER_H
 
 //#define DEBUG
-#define TEST
+//#define TEST
 
 #include "mpi.h"
 #include <stdio.h>

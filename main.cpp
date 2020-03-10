@@ -17,6 +17,16 @@ init_func (int i, int j)
   return 1. / (i + j + 1);
 }
 
+double
+init_func_1 (int i, int j)
+{
+  return N - std::max (i, j) - 2;
+  return (i == j) ? 1 : 0;
+  return (double)(i * N + j);
+  return (double)(i - j + 1);
+  return 1. / (i + j + 1);
+}
+
 
 int
 main (int argc, char *argv[])
@@ -82,13 +92,11 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   error = ALL_RIGHT;
   a = new double [p_blocks * n * m];
   b = new double [p_blocks * n * m];
-  work_space = new double [p * p_blocks * m * m + 3 * n * m
+  work_space = new double [2 * p * p_blocks * m * m + n
                            + 3 * m * m + p];
-#if 1
   deleter.add (a);
   deleter.add (b);
   deleter.add (work_space);
-#endif
   if (!a || !b)
     error = MEMORY_ERROR;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -139,17 +147,20 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
         for (int j = 0; j < n; ++j)
           {
             c[i * n + j] = init_func (i, j);
-            bb[i * n + j] = init_func (i, j);
+            bb[i * n + j] = init_func_1 (i, j);
           }
 
       c_norm = residual (c, bb, v, n);
-      print_matrix (c, n, n, file_name);
+      print_matrix (c, n, n);
+//      print_matrix (c, n, n, file_name);
+      printf ("c_norm = %le\n", c_norm);
+//      print_matrix (&c_norm, 1, 1, "norma.txt");
       delete [] c;
       delete [] bb;
       delete [] v;
     }
   MPI_Barrier (MPI_COMM_WORLD);
-#endif
+#endif // TEST
 
 
   // fill matrix
@@ -183,23 +194,15 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
 
 
   mpi_print_block_matrix (a, work_space, n, m, p, my_rank);
-  memcpy (b, a, p_blocks * n * m * sizeof (double));
-  mpi_print_block_matrix (b, work_space, n, m, p, my_rank);
 
-//  mpi_print_block_matrix (a, b, n, m, p, my_rank);
-//  double norm = mpi_norma (a, work_space, n, m, p, my_rank);
+
+#ifdef TEST
+  memcpy (b, a, p_blocks * n * m * sizeof (double));
+  mpi_init_matrix (b, n, m, p, my_rank, init_func_1);
   double res = mpi_residual (a, b, work_space, n, m, p, my_rank);
   if (my_rank == 0)
     {
-      printf ("residual = %lf\n", res);
-    }
-
-#ifdef TEST
-//  double norm = mpi_norma (a, line, n, m, p, my_rank);
-  if (my_rank == 0)
-    {
-      printf ("cnorm = %lf\n", c_norm);
-//      print_matrix (&c_norm, 1, 1, "2_norm.txt");
+      printf ("residual = %le\n", res);
     }
 #endif
 
@@ -209,9 +212,4 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   sum = 0;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 #endif //====================
-#if 0
-  delete [] a;
-  delete [] b;
-  delete [] work_space;
-#endif
 }
