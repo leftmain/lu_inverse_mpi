@@ -57,7 +57,6 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   int l = 0;
   int error = 0;
 
-
   // read args
   if (argc < 3 || argc > 4 || (n = atoi (argv[1])) <= 0
       || (m = atoi (argv[2])) <= 0 || m > n)
@@ -83,11 +82,13 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   error = ALL_RIGHT;
   a = new double [p_blocks * n * m];
   b = new double [p_blocks * n * m];
-  work_space = new double [p * p_blocks * m * m + n * m
-                           + p_blocks * m + 3 * m * m + p];
+  work_space = new double [p * p_blocks * m * m + 3 * n * m
+                           + 3 * m * m + p];
+#if 1
   deleter.add (a);
   deleter.add (b);
   deleter.add (work_space);
+#endif
   if (!a || !b)
     error = MEMORY_ERROR;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -208,4 +209,9 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   sum = 0;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 #endif //====================
+#if 0
+  delete [] a;
+  delete [] b;
+  delete [] work_space;
+#endif
 }

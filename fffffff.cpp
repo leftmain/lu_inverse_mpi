@@ -66,11 +66,30 @@ mpi_residual (const double *a, const double *b, double *work_space,
   nullify (sum_line, n);
   for (int j = 0; j < blocks; ++j)
     {
+      A(0) printf ("0j = %d\n", j); B
+      A(1) printf ("1j = %d\n", j); B
+      A(2) printf ("2j = %d\n", j); B
       // mpi_gather column j to recv_line
       get_column (b, send_line, n, m, p, my_rank, j);
+      A(0)
+      printf ("0>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+      print_matrix (send_line, 1, send_size);
+      B
+      A(1)
+      printf ("1>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+      print_matrix (send_line, 1, send_size);
+      B
+      A(0) printf ("0before\n"); B
+      A(1) printf ("1before\n"); B
+      A(2) printf ("2before\n"); B
       MPI_Allgather (send_line, send_size, MPI_DOUBLE,
                      recv_line, send_size, MPI_DOUBLE,
                      MPI_COMM_WORLD);
+      A(0) printf ("0after\n"); B
+      A(1) printf ("1after\n"); B
+      A(2) printf ("2after\n"); B
+      A(0) printf ("0>\n"); print_matrix (recv_line, 1, recv_size); B
+      A(1) printf ("1>\n"); print_matrix (recv_line, 1, recv_size); B
       // compose good line in send_line
       int w = block_width_jklm (j, k, l, m);
       for (int i = 0; i < blocks; ++i)
@@ -78,18 +97,29 @@ mpi_residual (const double *a, const double *b, double *work_space,
           get_from_column (recv_line, send_line + i * m * w,
                            w, block_height_iklm (i, k, l, m), i);
         }
+      A(0) printf ("#0\n"); print_matrix (send_line, 1, w * n); B
+      A(1) printf ("#1\n"); print_matrix (send_line, 1, w * n); B
       // scalar product
       for (int i = my_rank; i < blocks; i += p)
         {
+          A(0) printf ("0i = %d\n", i); B
+          A(1) printf ("1i = %d\n", i); B
+          A(2) printf ("2i = %d\n", i); B
           int loc_i = i / p;
           int h = block_height_iklm (i, k, l, m);
-          if (my_rank==0)print_matrix(send_line,w,n);
+          A(0) printf ("0 i k blocks %d %d %d\n", i, k, blocks); B
+          A(1) printf ("1 i k blocks %d %d %d\n", i, k, blocks); B
+          A(0) printf ("-0 hl %d,%d\n",h,l); print_matrix (a+loc_i*n*m, h, n); B
+          A(1) printf ("-1 hl %d,%d\n",h,l); print_matrix (a+loc_i*n*m, h, n); B
           scalar_product (a + loc_i * n * m, send_line, block_c, n, m, h, w);
-          if (my_rank==0)print_matrix(block_c,h,w);
+          A(0) printf ("##0\n"); print_matrix (block_c, h, w); B
+          A(1) printf ("##1\n"); print_matrix (block_c, h, w); B
           if (i == j)
             {
               matrix_minus_E (block_c, w);
             }
+          A(0) printf ("###0\n"); print_matrix (block_c, h, w); B
+          A(1) printf ("###1\n"); print_matrix (block_c, h, w); B
           add_to_sum (sum_line, block_c, loc_i, h, w);
         }
     }

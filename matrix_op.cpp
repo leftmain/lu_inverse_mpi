@@ -270,7 +270,7 @@ scalar_product (const double *first_line, const double *second_line,
   for (int i = 0; i < n_blocks; ++i)
     {
       int w1 = (i == k) ? l : m;
-      matrix_plus_multiply (first_line + i * h * w1, second_line + i * w1 * w,
+      matrix_plus_multiply (first_line + i * h * m, second_line + i * m * w,
                             result, h, w1, w);
     }
 }
