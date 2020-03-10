@@ -1,5 +1,6 @@
 CFLAGS = -O3 -ffast-math -Wall
 CFLAGS = -g 
+CFLAGS += -std=c++14
 #FLAGS = CFLAGS -std=c++11
 G = mpicxx
 C = mpicc

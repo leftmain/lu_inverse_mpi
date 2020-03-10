@@ -48,7 +48,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   const char *file_name = nullptr;
   double *a = nullptr;
   double *b = nullptr;
-  double *line = nullptr;
+  double *work_space = nullptr;
   int blocks = 0; // blocks in string
   int p_blocks = 0; // blocks in column (for each process)
   int n = 0;
@@ -75,16 +75,19 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   k = n / m;
   l = n % m;
   blocks = (l == 0) ? k : k + 1;
-  p_blocks = (blocks % p == 0) ? blocks / p : blocks / p + 1;
+//  p_blocks = (blocks % p == 0) ? blocks / p : blocks / p + 1;
+//  p_blocks = (blocks + p - 1) / p;
+  p_blocks = p_blocks_blocksp (blocks, p);
 
   int sum = 0;
   error = ALL_RIGHT;
   a = new double [p_blocks * n * m];
   b = new double [p_blocks * n * m];
-  line = new double [n * m + 3 * m * m];
+  work_space = new double [p * p_blocks * m * m + n * m
+                           + p_blocks * m + 3 * m * m + p];
   deleter.add (a);
   deleter.add (b);
-  deleter.add (line);
+  deleter.add (work_space);
   if (!a || !b)
     error = MEMORY_ERROR;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -178,13 +181,13 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
     }
 
 
-  mpi_print_block_matrix (a, line, n, m, p, my_rank);
+  mpi_print_block_matrix (a, work_space, n, m, p, my_rank);
   memcpy (b, a, p_blocks * n * m * sizeof (double));
-  mpi_print_block_matrix (b, line, n, m, p, my_rank);
+  mpi_print_block_matrix (b, work_space, n, m, p, my_rank);
 
 //  mpi_print_block_matrix (a, b, n, m, p, my_rank);
-//  double norm = mpi_norma (a, line, n, m, p, my_rank);
-  double res = mpi_residual (a, b, line, n, m, p, my_rank);
+//  double norm = mpi_norma (a, work_space, n, m, p, my_rank);
+  double res = mpi_residual (a, b, work_space, n, m, p, my_rank);
   if (my_rank == 0)
     {
       printf ("residual = %lf\n", res);

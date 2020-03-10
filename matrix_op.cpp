@@ -18,6 +18,18 @@ number_of_blocks_kl (int k, int l)
   return (l == 0) ? k : k + 1;
 }
 
+int
+p_blocks_blocksp (int blocks, int p)
+{
+  return (blocks + p - 1) / p;
+}
+
+int
+p_blocks_klp (int k, int l, int p)
+{
+  return (number_of_blocks_kl (k, l) + p - 1) / p;
+}
+
 void
 nullify (double *a, int size)
 {
@@ -227,6 +239,41 @@ set_row (double *a, const double *line, int n, int m,
           size * sizeof (double));
 }
 
+
+void
+get_column (const double *a, double *line, int n, int m,
+            int p, int my_rank, int j)
+{
+  int k = n / m;
+  int l = n % m;
+  int blocks = number_of_blocks_kl (k, l);
+  int offset = 0;
+  int w = block_width_jklm (j, k, l, m);
+  for (int i = my_rank; i < blocks; i += p)
+    {
+      get_block (a, line + offset, n, m, p, my_rank, i, j);
+      offset += w * m;
+    }
+}
+
+
+void
+scalar_product (const double *first_line, const double *second_line,
+                double *result, int n, int m, int h, int w)
+{
+  int k = n / m;
+  int l = n % m;
+  int n_blocks = number_of_blocks_kl (k, l);
+
+  nullify (result, m * m);
+
+  for (int i = 0; i < n_blocks; ++i)
+    {
+      int w1 = (i == k) ? l : m;
+      matrix_plus_multiply (first_line + i * h * w1, second_line + i * w1 * w,
+                            result, h, w1, w);
+    }
+}
 
 void
 matrix_multiply (const double *a, const double *b, double *c,

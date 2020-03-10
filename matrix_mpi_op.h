@@ -11,7 +11,7 @@ mpi_norma (const double *a, double *block, int n, int m,
            int p, int my_rank);
 
 double
-mpi_residual (const double *a, double *b, double *line,
+mpi_residual (const double *a, const double *b, double *work_space,
               int n, int m, int p, int my_rank);
 
 

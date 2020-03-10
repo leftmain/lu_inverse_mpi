@@ -38,6 +38,14 @@ set_row (double *a, const double *line, int n, int m,
          int p, int my_rank, int i, int from, int to);
 
 void
+get_column (const double *a, double *line, int n, int m,
+            int p, int my_rank, int j);
+
+void
+scalar_product (const double *first_line, const double *second_line,
+                double *blocks, int n, int m, int h, int w);
+
+void
 matrix_multiply (const double *a, const double *b, double *c,
                  int m, int n, int k);
 
@@ -57,5 +65,11 @@ block_width_jklm (int j, int k, int l, int m);
 
 int
 number_of_blocks_kl (int k, int l);
+
+int
+p_blocks_blocksp (int blocks, int p);
+
+int
+p_blocks_klp (int k, int l, int p);
 
 #endif
