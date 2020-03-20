@@ -123,7 +123,7 @@ mpi_print_block_matrix_simple (const double *a, double *lines,
   if (my_rank == 0)
     {
       for (int t = 0; t < p; ++t)
-	      {
+        {
           const double *curr_array = a;
           int columns = k / p;
           if (k % p > 0 && t < k % p)
@@ -139,7 +139,7 @@ mpi_print_block_matrix_simple (const double *a, double *lines,
             }
           printf ("%d:\n", t);
           print_matrix (curr_array, 1, columns * n);
-	      }
+        }
     }
   else
     {
@@ -202,7 +202,7 @@ mpi_print_block_matrix (const double *a, double *line, int n, int m,
     {
 #ifdef PRINT_LINE
       for (int i = 0; i <= 7 * N; i++)
-        printf ("- ");
+        printf ("-");
       printf ("\n");
 #endif
     }

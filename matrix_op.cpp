@@ -1,25 +1,19 @@
 #include "matrix_op.h"
 
 int
-block_height_iklm (int i, int k, int l, int m)
+get_block_size (int i, int k, int l, int m)
 {
   return (i == k) ? l : m;
 }
 
 int
-block_width_jklm (int j, int k, int l, int m)
-{
-  return (j == k) ? l : m;
-}
-
-int
-number_of_blocks_kl (int k, int l)
+get_number_of_blocks (int k, int l)
 {
   return (l == 0) ? k : k + 1;
 }
 
 int
-p_blocks_blocksp (int blocks, int p)
+get_p_blocks (int blocks, int p)
 {
   return (blocks + p - 1) / p;
 }
@@ -27,7 +21,7 @@ p_blocks_blocksp (int blocks, int p)
 int
 p_blocks_klp (int k, int l, int p)
 {
-  return (number_of_blocks_kl (k, l) + p - 1) / p;
+  return (get_number_of_blocks (k, l) + p - 1) / p;
 }
 
 void
@@ -53,6 +47,32 @@ sum_arrays (double *a, const double *b, int len)
       a[i + 6] += b[i + 6];
       a[i + 7] += b[i + 7];
     }
+}
+
+
+void
+minus_array (double *a, int len)
+{
+  for (int i = 0; i < (len & 7); ++i)
+    a[i] = -a[i];
+  for (int i = (len & 7); i < len; i += 8)
+    {
+      a[i + 0] = -a[i + 0];
+      a[i + 1] = -a[i + 1];
+      a[i + 2] = -a[i + 2];
+      a[i + 3] = -a[i + 3];
+      a[i + 4] = -a[i + 4];
+      a[i + 5] = -a[i + 5];
+      a[i + 6] = -a[i + 6];
+      a[i + 7] = -a[i + 7];
+    }
+}
+
+
+void
+copy_array (const double *a, double *b, int size)
+{
+  memcpy (b, a, size * sizeof (double));
 }
 
 
@@ -155,31 +175,44 @@ get_block (const double *a, double *block, int n, int m,
            int p, int my_rank, int i, int j)
 {
   if (i % p != my_rank)
-    return;
+    {
+      printf ("VERY-VERY-BAD - came to unreachable code\n");
+      MPI_Abort (MPI_COMM_WORLD, 0);
+    }
 
   int k = n / m;
   int l = n % m;
 //  int h = (i == k) ? l : m;
 //  int w = (j == k) ? l : m;
-  int h = block_height_iklm (i, k, l, m);
-  int w = block_width_jklm (j, k, l, m);
+  int h = get_block_size (i, k, l, m);
+  int w = get_block_size (j, k, l, m);
 
   memcpy (block, a + (i / p) * n * m + j * h * m,
           h * w * sizeof (double));
 }
 
-double *
-get_block (double *a, int n, int m, int p,
-           int my_rank, int i, int j)
-{
-//  int k = n / m;
-//  int l = n % m;
-//  int h = (i == k) ? l : m;
-//  int w = (j == k) ? l : m;
-//  int h = block_height_iklm (i, k, l, m);
-//  int w = block_width_jklm (j, k, l, m);
 
-  return a + (i / p) * n * m + (j / m) * j * m;
+void
+get_block_from_line (const double *line, double *block, int n, int m, int h, int j)
+{
+  int k = n / m;
+  int l = n % m;
+  int w = get_block_size (j, k, l, m);
+
+  memcpy (block, line + j * h * m,
+          h * w * sizeof (double));
+}
+
+
+void
+set_block_to_line (double *line, const double *block, int n, int m, int h, int j)
+{
+  int k = n / m;
+  int l = n % m;
+  int w = get_block_size (j, k, l, m);
+
+  memcpy (line + j * h * m, block,
+          h * w * sizeof (double));
 }
 
 
@@ -188,14 +221,14 @@ set_block (double *a, const double *block, int n, int m,
            int p, int my_rank, int i, int j)
 {
   if (i % p != my_rank)
-    return;
+    MPI_Abort (MPI_COMM_WORLD, 0);
 
   int k = n / m;
   int l = n % m;
 //  int h = (i == k) ? l : m;
 //  int w = (j == k) ? l : m;
-  int h = block_height_iklm (i, k, l, m);
-  int w = block_width_jklm (j, k, l, m);
+  int h = get_block_size (i, k, l, m);
+  int w = get_block_size (j, k, l, m);
 
   memcpy (a + (i / p) * n * m + j * h * m, block,
           h * w * sizeof (double));
@@ -203,18 +236,21 @@ set_block (double *a, const double *block, int n, int m,
 
 
 void
-get_row (const double *a, double *line, int n, int m,
-         int p, int my_rank, int i, int from, int to)
+get_line (const double *a, double *line, int n, int m,
+          int p, int my_rank, int i, int from, int to)
 {
   if (i % p != my_rank)
-    return;
+    MPI_Abort (MPI_COMM_WORLD, 0);
 
   int k = n / m;
   int l = n % m;
 //  int h = (i == k) ? l : m;
-  int h = block_height_iklm (i, k, l, m);
-  int size = (to == k) ? (to - from) * h * m + h * l
-                       : (to - from + 1) * h * m;
+  int h = get_block_size (i, k, l, m);
+  int size = (to - from) * h * m;
+  if (to == k)
+    size += h * l;
+  else
+    size += h * m;
 
   memcpy (line, a + (i / p) * n * m + from * h * m,
           size * sizeof (double));
@@ -222,8 +258,8 @@ get_row (const double *a, double *line, int n, int m,
 
 
 void
-set_row (double *a, const double *line, int n, int m,
-         int p, int my_rank, int i, int from, int to)
+set_line (double *a, const double *line, int n, int m,
+          int p, int my_rank, int i, int from, int to)
 {
   if (i % p != my_rank)
     return;
@@ -231,7 +267,7 @@ set_row (double *a, const double *line, int n, int m,
   int k = n / m;
   int l = n % m;
 //  int h = (i == k) ? l : m;
-  int h = block_height_iklm (i, k, l, m);
+  int h = get_block_size (i, k, l, m);
   int size = (to == k) ? (to - from) * h * m + h * l
                        : (to - from + 1) * h * m;
 
@@ -246,9 +282,9 @@ get_column (const double *a, double *line, int n, int m,
 {
   int k = n / m;
   int l = n % m;
-  int blocks = number_of_blocks_kl (k, l);
+  int blocks = get_number_of_blocks (k, l);
   int offset = 0;
-  int w = block_width_jklm (j, k, l, m);
+  int w = get_block_size (j, k, l, m);
   for (int i = my_rank; i < blocks; i += p)
     {
       get_block (a, line + offset, n, m, p, my_rank, i, j);
@@ -258,12 +294,45 @@ get_column (const double *a, double *line, int n, int m,
 
 
 void
+get_column (const double *a, double *line, int n, int m,
+            int p, int my_rank, int j, int from, int to)
+{
+  int k = n / m;
+  int l = n % m;
+  int offset = 0;
+  int w = get_block_size (j, k, l, m);
+  int f = from - from % p + my_rank;
+  if (f < from)
+    f += p;
+  for (int i = f; i <= to; i += p)
+    {
+      get_block (a, line + offset, n, m, p, my_rank, i, j);
+      offset += w * m;
+    }
+}
+
+
+void
+get_line (const double *a, double *line, int n, int m,
+          int p, int my_rank, int i)
+{
+  if (i % p != my_rank)
+    MPI_Abort (MPI_COMM_WORLD, 0);
+
+  int k = n / m;
+  int l = n % m;
+  int h = get_block_size (i, k, l, m);
+  memcpy (line, a + (i / p) * m * n, h * n * sizeof (double));
+}
+
+
+void
 scalar_product (const double *first_line, const double *second_line,
                 double *result, int n, int m, int h, int w)
 {
   int k = n / m;
   int l = n % m;
-  int n_blocks = number_of_blocks_kl (k, l);
+  int n_blocks = get_number_of_blocks (k, l);
 
   nullify (result, m * m);
 
@@ -604,3 +673,160 @@ matrix_minus_multiply (const double *a, const double *b, double *c,
         }
     }
 }
+
+
+static bool
+is_equal (const double first, const double second, const double n = -1.)
+{
+  static double norma_ = 0.;
+  if (n >= 0)
+    {
+      if (n < std::numeric_limits<double>::epsilon ())
+        norma_ = std::numeric_limits<double>::epsilon ();
+      else
+        norma_ = n;
+      return true;
+    }
+  if (fabs (first - second) < std::numeric_limits<double>::epsilon () * norma_)
+    return true;
+  else
+    return false;
+}
+
+
+static int
+lu_decomposition (double *a, int n)
+{
+  // U_{1,j} = (L_{1,1})^(-1) * A_{1,j}
+  if (is_equal (a[0], 0.))
+    return 1;
+  for (int k = 1; k < n; ++k)
+    a[k] /= a[0];
+
+  for (int k = 1; k < n; ++k)
+    {
+      // L_{i,k} = A_{i,k} - sum_{j=1}^{k-1}(L_{i,j} * U_{j,k})
+      for (int i = k; i < n; ++i)
+        {
+          double sum = 0.;
+          for (int j = 0; j < k; ++j)
+            {
+              sum += a[i * n + j] * a[j * n + k];
+            }
+          a[i * n + k] -= sum;
+        }
+
+      // U_{k,i} = (A_{k,i} - sum_{j=1}^{k-1}(L_{k,j} * U_{j,i})) / L_{i,i}
+      for (int i = k + 1; i < n; ++i)
+        {
+          double sum = 0.;
+          for (int j = 0; j < k; ++j)
+            {
+              sum += a[k * n + j] * a[j * n + i];
+            }
+
+          if (is_equal (a[k * n + k], 0.))
+            return 1;
+
+          a[k * n + i] -= sum;
+          a[k * n + i] /= a[k * n + k];
+        }
+    }
+  return 0;
+}
+
+
+static int
+lu_invert (double *a, int n)
+{
+  // L^(-1)_{i,i} = (L_{i,i})^(-1)
+  // L^(-1)_{i,j} = -L^(-1)_{i,i} * (sum_{s=j}^{i-1}(L_{i,s} * L^(-1)_{s,j}))
+  //
+  // L_{0,0} = ..
+  if (is_equal (a[0 * n + 0], 0.))
+    return 1;
+  a[0 * n + 0] = 1. / a[0 * n + 0];
+  for (int i = 1; i < n; ++i)
+    {
+      // L_{i,i} = ..
+      if (is_equal(a[i * n + i], 0.))
+        return 1;
+      a[i * n + i] = 1. / a[i * n + i];
+
+      // L_{i,j} = ..
+      for (int j = 0; j < i; ++j)
+        {
+          double sum = 0.;
+          for (int s = j; s < i; ++s)
+            {
+              sum += a[i * n + s] * a[s * n + j];
+            }
+          a[i * n + j] = -sum * a[i * n + i];
+        }
+    }
+
+  // U_{i,j} = -sum_{s=i}^{j-1} (U^(-1)_{i,s} * U_{s,j})
+  for (int i = 0; i < n - 1; ++i)
+    {
+      for (int j = i + 1; j < n; ++j)
+        {
+          double sum = a[i * n + j];
+          for (int s = i + 1; s < j; ++s)
+            {
+              sum += a[i * n + s] * a[s * n + j];
+            }
+          a[i * n + j] = -sum;
+        }
+    }
+  return 0;
+}
+
+
+static void
+ul_multiply (const double *a, double *b, int n)
+{
+  for (int i = 0; i < n; ++i)
+    {
+      for (int j = 0; j < n; ++j)
+        {
+          double sum = 0.;
+          int k = std::max (i, j);
+          if (k == i)
+            sum += a[i * n + j];
+          else
+            sum += a[i * n + k] * a[k * n + j];
+          for (++k; k < n; ++k)
+            {
+              sum += a[i * n + k] * a[k * n + j];
+            }
+          b[i * n + j] = sum;
+        }
+    }
+}
+
+
+int
+lu_matrix_inverse (double *a, double *b, int n)
+{
+  is_equal (0, 0, norma (a, n));
+
+  if (lu_decomposition (a, n))
+    return 1;
+
+  if (lu_invert (a, n))
+    return 1;
+
+  ul_multiply (a, b, n);
+
+  return 0;
+}
+
+
+double
+get_earth_time ()
+{
+  struct timeval t;
+  gettimeofday (&t, NULL);
+  return (double)t.tv_sec + (double)t.tv_usec * 1e-6;
+}
+

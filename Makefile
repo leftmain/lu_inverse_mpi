@@ -1,7 +1,7 @@
-CFLAGS = -O3 -ffast-math -Wall
+CFLAGS = -O3 -ffast-math
 #CFLAGS = -g 
 CFLAGS += -std=c++14
-#FLAGS = CFLAGS -std=c++11
+CFLAGS += -Wall -Werror -Wextra -Wfloat-equal -Wcast-qual -pedantic
 G = mpicxx
 C = mpicc
 M = Makefile header.h

@@ -2,7 +2,8 @@
 #define HEADER_H
 
 //#define DEBUG
-//#define TEST
+//#define RES_TEST
+//#define CHECK
 
 #include "mpi.h"
 #include <stdio.h>
@@ -10,6 +11,29 @@
 #include <math.h>
 #include <string.h>
 #include <vector>
+#include <sys/time.h>
+#include <limits>
+#include <algorithm>
+
+double
+get_earth_time ();
+
+class MPI_Auto_Timer
+{
+  private:
+    double *time = nullptr;
+
+  public:
+    MPI_Auto_Timer (double *t)
+      {
+        time = t;
+        *time = 0. - MPI_Wtime ();
+      }
+    ~MPI_Auto_Timer ()
+      {
+        *time += MPI_Wtime ();
+      }
+};
 
 template <typename T>
 class Deleter
@@ -58,6 +82,7 @@ enum Error
   CANNOT_OPEN = 1,
   CANNOT_READ = 2,
   MEMORY_ERROR = 3,
+  METHOD_ERROR = 4,
 };
 
 #endif

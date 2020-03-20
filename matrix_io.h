@@ -2,7 +2,7 @@
 #define MATRIX_IO_H
 
 #include "header.h"
-#define MAX_PRINT 15 //20
+#define MAX_PRINT 10 //20
 //#define SHORT_PRINT
 #define PRINT_LINE
 

@@ -54,20 +54,9 @@ main (int argc, char *argv[])
 void
 start_algorithm (int argc, char *argv[], int p, int my_rank)
 {
-  Deleter<double *> deleter;
-  const char *file_name = nullptr;
-  double *a = nullptr;
-  double *b = nullptr;
-  double *work_space = nullptr;
-  int blocks = 0; // blocks in string
-  int p_blocks = 0; // blocks in column (for each process)
+  // read args
   int n = 0;
   int m = 0;
-  int k = 0;
-  int l = 0;
-  int error = 0;
-
-  // read args
   if (argc < 3 || argc > 4 || (n = atoi (argv[1])) <= 0
       || (m = atoi (argv[2])) <= 0 || m > n)
     {
@@ -75,36 +64,45 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
         printf ("usage: %s n m [file_name]\n", argv[0]);
       return;
     }
+  N = n;
+
+  const char *file_name = nullptr;
   if (argc == 4)
     file_name = argv[3];
-  N = n;
 
 
   // memory allocation
-  k = n / m;
-  l = n % m;
-  blocks = (l == 0) ? k : k + 1;
+  int k = n / m;
+  int l = n % m;
+  int blocks = get_number_of_blocks (k, l); //(l == 0) ? k : k + 1;
+  int p_blocks = get_p_blocks (blocks, p);
 //  p_blocks = (blocks % p == 0) ? blocks / p : blocks / p + 1;
 //  p_blocks = (blocks + p - 1) / p;
-  p_blocks = p_blocks_blocksp (blocks, p);
 
-  int sum = 0;
-  error = ALL_RIGHT;
+  double *a = nullptr;
+  double *b = nullptr;
+  double *workspace = nullptr;
   a = new double [p_blocks * n * m];
   b = new double [p_blocks * n * m];
-  work_space = new double [2 * p * p_blocks * m * m + n
+  workspace = new double [2 * p * p_blocks * m * m + n * m
                            + 3 * m * m + p];
+
+  Deleter<double *> deleter;
   deleter.add (a);
   deleter.add (b);
-  deleter.add (work_space);
+  deleter.add (workspace);
+
+  int error = ALL_RIGHT;
   if (!a || !b)
     error = MEMORY_ERROR;
+
+  int sum = 0;
   MPI_Allreduce (&error, &sum, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   if (sum != ALL_RIGHT)
     return;
 
 
-#ifdef TEST
+#ifdef RES_TEST
   file_name = "1_matr.txt";
   double *c = nullptr;
   double *bb = nullptr;
@@ -112,7 +110,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   double c_norm = 0.;
 
 
-  auto residual = [](const double *a, const double *b, double *vector, int n)
+  auto f_residual = [](const double *a, const double *b, double *vector, int n)
   {
     double max_string_sum = 0;
     for (int i = 0; i < n; ++i)
@@ -150,7 +148,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
             bb[i * n + j] = init_func_1 (i, j);
           }
 
-      c_norm = residual (c, bb, v, n);
+      c_norm = f_residual (c, bb, v, n);
       print_matrix (c, n, n);
 //      print_matrix (c, n, n, file_name);
       printf ("c_norm = %le\n", c_norm);
@@ -167,7 +165,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
   error = ALL_RIGHT;
   if (file_name)
     {
-      error = mpi_read_matrix (a, b, n, m, p, my_rank, file_name);
+      error = mpi_read_matrix (a, workspace, n, m, p, my_rank, file_name);
     }
   else
     {
@@ -193,13 +191,130 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
     }
 
 
-  mpi_print_block_matrix (a, work_space, n, m, p, my_rank);
+  if (my_rank == 0)
+    {
+      printf ("A:\n");
+    }
+  mpi_print_block_matrix (a, workspace, n, m, p, my_rank);
 
 
-#ifdef TEST
+  double global_time = 0.;
+  if (my_rank == 0)
+    global_time = get_earth_time ();
+
+  double time = 0.;
+  error = mpi_lu_matrix_inverse (a, b, workspace, n, m, p, my_rank, &time);
+
+  if (my_rank == 0)
+    {
+      global_time = get_earth_time () - global_time;
+      if (error != ALL_RIGHT)
+        {
+          printf ("method cannot be applyed\n");
+          return;
+        }
+    }
+
+
+  if (my_rank == 0)
+    {
+      printf ("A^(-1):\n");
+    }
+  mpi_print_block_matrix (b, workspace, n, m, p, my_rank);
+
+
+  double *p_buf = workspace;
+  MPI_Allgather (&time, 1, MPI_DOUBLE, p_buf, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+  if (my_rank == 0)
+    {
+      printf ("global time: %.2lf\n", global_time);
+      for (int i = 0; i < p; ++i)
+        {
+          printf ("proccess %d time: %.2lf\n", i, p_buf[i]);
+        }
+    }
+
+
+#ifdef CHECK
+  mpi_print_block_matrix (b, workspace, n, m, p, my_rank, "res.txt");
+  double *aa = new double[n*n];
+  double *bb = new double[n*n];
+  double *cc = new double[n*n];
+  FILE *fp;
+  MPI_Barrier (MPI_COMM_WORLD);
+  bool ok = true;
+  if (my_rank == 0)
+    {
+      fp = fopen ("res.txt","r");
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+          {
+            aa[i * n + j] = init_func (i, j);
+          }
+      lu_matrix_inverse (aa, bb, n);
+  //    print_matrix (bb, n, n);
+
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+          {
+            if (fscanf (fp, "%lf", aa + i * n + j) != 1)
+              MPI_Abort (MPI_COMM_WORLD, 0);
+            bb[i * n + j] = init_func (i, j);
+          }
+      fclose (fp);
+      matrix_multiply (aa, bb, cc, n, n, n);
+  //    print_matrix (cc, n, n);
+      double norm = norma (cc, n, n);
+      for (int i = 0; i < n; ++i)
+        {
+          for (int j = 0; j < n; ++j)
+            {
+              double offset = (i == j) ? 1. : 0.;
+              if (fabs (cc[i * n + j] - offset) >= 1e-16 * norm)
+                {
+                  printf ("BAD_MATRIX:\n");
+                  print_matrix (cc, n, n);
+                  i = j = n;
+                  ok = false;
+                  break;
+                }
+            }
+        }
+    }
+  MPI_Barrier (MPI_COMM_WORLD);
+  delete [] aa;
+  delete [] bb;
+  delete [] cc;
+#endif // CHECK
+
+
+  //  read matrix again
+  if (file_name)
+    {
+      error = mpi_read_matrix (a, workspace, n, m, p, my_rank, file_name);
+    }
+  else
+    {
+      mpi_init_matrix (a, n, m, p, my_rank, init_func);
+    }
+
+  double residual = mpi_residual (a, b, workspace, n, m, p, my_rank);
+
+  if (my_rank == 0)
+    {
+#ifdef CHECK
+      if (ok)
+        printf ("OK\t");
+      else
+        printf ("WRONG\t");
+#endif // CHECK
+      printf ("n = %d\tm = %d\tp = %d\tresidual = %le\n", n, m, p, residual);
+    }
+
+#ifdef RES_TEST
   memcpy (b, a, p_blocks * n * m * sizeof (double));
   mpi_init_matrix (b, n, m, p, my_rank, init_func_1);
-  double res = mpi_residual (a, b, work_space, n, m, p, my_rank);
+  double res = mpi_residual (a, b, workspace, n, m, p, my_rank);
   if (my_rank == 0)
     {
       printf ("residual = %le\n", res);
