@@ -12,28 +12,89 @@
 #include <string.h>
 #include <vector>
 #include <sys/time.h>
+#include <sys/resource.h>
 #include <limits>
 #include <algorithm>
 
 double
 get_earth_time ();
 
-class MPI_Auto_Timer
+double
+get_process_time ();
+
+
+struct Time
+{
+  double global_time = 0.;
+  double process_time = 0.;
+  double decomposition_time = 0.;
+  double invert_time = 0.;
+  double mult_time = 0.;
+
+  double residual_global_time = 0.;
+  double residual_process_time = 0.;
+};
+
+
+class ProcessTimer
 {
   private:
     double *time = nullptr;
+    bool stopped = false;
 
   public:
-    MPI_Auto_Timer (double *t)
+    ProcessTimer (double &t)
       {
-        time = t;
-        *time = 0. - MPI_Wtime ();
+        time = &t;
+        *time = 0. - get_process_time ();
       }
-    ~MPI_Auto_Timer ()
+    ~ProcessTimer ()
       {
-        *time += MPI_Wtime ();
+        if (!stopped)
+          *time += get_process_time ();
+      }
+    void start ()
+      {
+        *time = 0. - get_process_time ();
+      }
+    void stop ()
+      {
+        *time += get_process_time ();
+        stopped = true;
       }
 };
+
+
+class GlobalTimer
+{
+  private:
+    double *time = nullptr;
+    bool stopped = false;
+
+  public:
+    GlobalTimer (double &t)
+      {
+        time = &t;
+        *time = 0. - MPI_Wtime ();
+      }
+    ~GlobalTimer ()
+      {
+        if (!stopped)
+          {
+            *time += MPI_Wtime ();
+          }
+      }
+    void start ()
+      {
+        *time = 0. - MPI_Wtime ();
+      }
+    void stop ()
+      {
+        *time += MPI_Wtime ();
+        stopped = true;
+      }
+};
+
 
 template <typename T>
 class Deleter
@@ -56,6 +117,7 @@ class Deleter
       }
 };
 
+
 class Closer
 {
   private:
@@ -75,6 +137,7 @@ class Closer
         fp.push_back (new_fp);
       }
 };
+
 
 enum Error
 {

@@ -30,17 +30,26 @@ void
 mpi_init_matrix (double *a, int n, int m, int p, int my_rank,
                  double (*f)(int, int));
 
-void // print block matrix n x n (m - block size)
-mpi_print_block_matrix_simple (const double *a, double *lines,
+void
+mpi_print_matrix_simple (const double *a, double *lines,
                                int n, int m, int p, int my_rank);
 
-void // print block matrix n x n (m - block size)
-mpi_print_block_matrix (const double *a, double *line, int n, int m,
-                        int p, int my_rank, FILE *fp = stdout);
+void
+mpi_print_matrix (const double *a, double *line, int n, int m,
+                        int p, int my_rank, FILE *fp = stdout); 
 
 int
-mpi_print_block_matrix (const double *a, double *line, int n, int m,
+mpi_print_matrix (const double *a, double *line, int n, int m,
                         int p, int my_rank, const char *file_name);
+
+void
+mpi_print_matrix_with_prefix (const double *a, double *line, int n,
+                              int m, int p, int my_rank, FILE *fp,
+                              const char *prefix = nullptr);
+
+void
+mpi_print_matrix_with_prefix (const double *a, double *line, int n, int m,
+                              int p, int my_rank, const char *prefix = nullptr);
 
 #endif
 

@@ -28,9 +28,12 @@ mpi_norma (const double *a, double *block, const int n, const int m,
 
 
 double
-mpi_residual (const double *a, const double *b, double *workspace,
-              const int n, const int m, const int p, const int my_rank)
+mpi_residual (const double *a, const double *b, double *workspace, const int n,
+              const int m, const int p, const int my_rank, Time &time)
 {
+  GlobalTimer global_timer (time.residual_global_time);
+  ProcessTimer process_timer (time.residual_process_time);
+
   int k = n / m;
   int l = n % m;
   int blocks = get_number_of_blocks (k, l);
@@ -134,7 +137,7 @@ mpi_lu_decomposition (double *a, double *workspace,
       int line_size = m * n; // make m*n-k*m^2
       int root = k % p;
 
-      // set line k from a to line (in proccess k % p)
+      // set line k from a to line (in process k % p)
       if (my_rank == root)
         {
           get_line (a, line, n, m, p, my_rank, k);
@@ -330,7 +333,7 @@ mpi_lu_invert (double *a, const double *b, double *workspace,
     {
       int root = k % p;
 
-      //  set line k from a to line (in proccess k % p)
+      //  set line k from a to line (in process k % p)
       if (my_rank == root)
         {
           get_line (a, line, n, m, p, my_rank, k, 0, k - 1);
@@ -339,7 +342,7 @@ mpi_lu_invert (double *a, const double *b, double *workspace,
       //  send line k to others
       MPI_Bcast (line, k * m * m, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
-      //  apply line to all rows of proccess
+      //  apply line to all rows of process
       from = k - root + my_rank;
       if (from <= k)
         from += p;
@@ -464,18 +467,16 @@ mpi_ul_multiply (const double *a, double *b, double *workspace,
 int
 mpi_lu_matrix_inverse (double *a, double *b, double *workspace,
                        const int n, const int m, const int p,
-                       const int my_rank, double *time)
+                       const int my_rank, Time &time)
 {
-  MPI_Auto_Timer timer (time);
+  GlobalTimer global_timer (time.global_time);
+  ProcessTimer process_timer (time.process_time);
 
+  //  LU decomposition
+  ProcessTimer decomposition_timer (time.decomposition_time);
   if (mpi_lu_decomposition (a, workspace, n, m, p, my_rank))
     return METHOD_ERROR;
-
-  int k = n / m;
-  int l = n % m;
-  int blocks = get_number_of_blocks (k, l);
-  int p_blocks = get_p_blocks (blocks, p);
-  copy_array (a, b, p_blocks * n * m);
+  decomposition_timer.stop ();
 
 #ifdef DEBUG
   MPI_Barrier (MPI_COMM_WORLD);
@@ -485,8 +486,17 @@ mpi_lu_matrix_inverse (double *a, double *b, double *workspace,
   MPI_Barrier (MPI_COMM_WORLD);
 #endif
 
+  int k = n / m;
+  int l = n % m;
+  int blocks = get_number_of_blocks (k, l);
+  int p_blocks = get_p_blocks (blocks, p);
+  copy_array (a, b, p_blocks * n * m);
+
+  //  inversoin L and U
+  ProcessTimer invert_timer (time.invert_time);
   if (mpi_lu_invert (a, b, workspace, n, m, p, my_rank))
     return METHOD_ERROR;
+  invert_timer.stop ();
 
 #ifdef DEBUG
   MPI_Barrier (MPI_COMM_WORLD);
@@ -496,7 +506,9 @@ mpi_lu_matrix_inverse (double *a, double *b, double *workspace,
   MPI_Barrier (MPI_COMM_WORLD);
 #endif
 
+  ProcessTimer mult_timer (time.mult_time);
   mpi_ul_multiply (a, b, workspace, n, m, p, my_rank);
+  mult_timer.stop ();
 
   return ALL_RIGHT;
 }

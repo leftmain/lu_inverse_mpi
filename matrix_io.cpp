@@ -110,7 +110,7 @@ mpi_init_matrix (double *a, int n, int m, int p, int my_rank,
 
 
 void
-mpi_print_block_matrix_simple (const double *a, double *lines,
+mpi_print_matrix_simple (const double *a, double *lines,
                                int n, int m, int p, int my_rank)
 {
   int k = n / m;
@@ -149,7 +149,27 @@ mpi_print_block_matrix_simple (const double *a, double *lines,
 
 
 void
-mpi_print_block_matrix (const double *a, double *line, int n, int m,
+mpi_print_matrix_with_prefix (const double *a, double *line, int n, int m,
+                              int p, int my_rank, FILE *fp, const char *prefix)
+{
+  if (my_rank == 0 && prefix != nullptr)
+    {
+      fprintf (fp, "%s\n", prefix);
+    }
+  mpi_print_matrix (a, line, n, m, p, my_rank, fp);
+}
+
+
+void
+mpi_print_matrix_with_prefix (const double *a, double *line, int n, int m,
+                              int p, int my_rank, const char *prefix)
+{
+  mpi_print_matrix_with_prefix (a, line, n, m, p, my_rank, stdout, prefix);
+}
+
+
+void
+mpi_print_matrix (const double *a, double *line, int n, int m,
                         int p, int my_rank, FILE *fp)
 {
   int N = n;
@@ -210,7 +230,7 @@ mpi_print_block_matrix (const double *a, double *line, int n, int m,
 
 
 int
-mpi_print_block_matrix (const double *a, double *line, int n, int m,
+mpi_print_matrix (const double *a, double *line, int n, int m,
                         int p, int my_rank, const char *file_name)
 {
   Closer closer;
@@ -231,7 +251,7 @@ mpi_print_block_matrix (const double *a, double *line, int n, int m,
       return error;
     }
 
-  mpi_print_block_matrix (a, line, n, m, p, my_rank, fp);
+  mpi_print_matrix (a, line, n, m, p, my_rank, fp);
 
   return ALL_RIGHT;
 }

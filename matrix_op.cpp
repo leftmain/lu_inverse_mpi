@@ -830,3 +830,12 @@ get_earth_time ()
   return (double)t.tv_sec + (double)t.tv_usec * 1e-6;
 }
 
+
+double
+get_process_time ()
+{
+  struct rusage time;
+  getrusage (RUSAGE_THREAD, &time);
+  return (double)time.ru_utime.tv_sec +
+         (double)time.ru_utime.tv_usec * 1e-6;
+}
