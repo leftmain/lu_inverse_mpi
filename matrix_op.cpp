@@ -835,7 +835,7 @@ double
 get_process_time ()
 {
   struct rusage time;
-  getrusage (RUSAGE_THREAD, &time);
+  getrusage (RUSAGE_SELF, &time);
   return (double)time.ru_utime.tv_sec +
          (double)time.ru_utime.tv_usec * 1e-6;
 }
