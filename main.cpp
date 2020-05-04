@@ -49,7 +49,7 @@ start_algorithm (int argc, char *argv[], int p, int my_rank)
       || (m = atoi (argv[2])) <= 0 || m > n)
     {
       if (my_rank == 0)
-        printf ("usage: %s n m [file_name]\n", argv[0]);
+        printf ("usage: mpirun -np p %s n m [file_name]\n", argv[0]);
       return;
     }
   N = n;
